@@ -43,7 +43,6 @@ def LLM(query):
         response = llm.invoke(messages)
         response = sanitize_json_string(response.content)
         response = json.loads(response)
-        print(response)
         return response
     
     except Exception as e:
@@ -99,7 +98,6 @@ def find_relevant_posts(posts):
         response = llm.invoke(messages)
         response = sanitize_json_string(response.content)
         response = json.loads(response)
-        print(response)
         return response
     
     except Exception as e:

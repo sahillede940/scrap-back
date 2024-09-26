@@ -4,11 +4,34 @@ from sqlalchemy import Column, Integer, String, create_engine
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker, Session
 from sqlalchemy.future import select
-from llm import LLM, find_relevant_posts  # Assuming you have an LLM function that generates keywords from the query
+from llm import (
+    LLM,
+    find_relevant_posts,
+)  # Assuming you have an LLM function that generates keywords from the query
+
 # import cors
 from fastapi.middleware.cors import CORSMiddleware
+
 # Database  is in my current directory
-DATABASE_URL = "sqlite:///./my_database2.db"
+import os
+from dotenv import load_dotenv
+
+load_dotenv()
+
+
+# boolean value to check if the code is in debug mode
+DEBUG = os.getenv("DEBUG", False)
+
+
+SUPABASE_HOST = os.getenv("SUPABASE_HOST")
+SUPABASE_PORT = os.getenv("SUPABASE_PORT")
+SUPABASE_DBNAME = os.getenv("SUPABASE_DBNAME")
+SUPABASE_USER = os.getenv("SUPABASE_USER")
+SUPABASE_PASS = os.getenv("SUPABASE_PASS")
+
+DATABASE_URL = f"postgresql://{SUPABASE_USER}:{SUPABASE_PASS}@{SUPABASE_HOST}:{SUPABASE_PORT}/{SUPABASE_DBNAME}"
+
+print(DATABASE_URL)
 import os
 from sqlalchemy.sql import func
 
@@ -33,17 +56,18 @@ app.add_middleware(
 )
 
 
-
 # SQLAlchemy Post model to represent the posts table
 class Post(Base):
-    __tablename__ = 'my_table'
+    __tablename__ = "my_table"
     id = Column(Integer, primary_key=True, index=True)
     title = Column(String, index=True)
     description = Column(String)
 
+
 # Pydantic model for the search query
 class SearchQuery(BaseModel):
     query: str
+
 
 # Dependency to get the database session
 def get_db():
@@ -53,8 +77,10 @@ def get_db():
     finally:
         db.close()
 
+
 # Create tables (only run this once to create the tables in your database)
 Base.metadata.create_all(bind=engine)
+
 
 # Endpoint to search posts by keywords
 @app.post("/search-posts/")
@@ -83,18 +109,28 @@ async def search_posts(query: SearchQuery, db: Session = Depends(get_db)):
 
     # Query the database for posts that match the combined filter
     # randomize posts
-    posts = db.execute(select(Post).where(combined_filter).order_by(func.random()).limit(20)).scalars().all()
+    posts = (
+        db.execute(
+            select(Post).where(combined_filter).order_by(func.random()).limit(20)
+        )
+        .scalars()
+        .all()
+    )
 
     data = []
     # Return the posts as a respons
     for post in posts:
-        data.append({"title": post.title, "description": post.description, "id": post.id})
+        data.append(
+            {"title": post.title, "description": post.description, "id": post.id}
+        )
 
     if not posts:
         return {"message": "No posts found with the given keywords"}
 
     return {"posts": posts}
 
+
 if __name__ == "__main__":
-    import uvicorn  
+    import uvicorn
+
     uvicorn.run(app, host="0.0.0.0", port=8000)
